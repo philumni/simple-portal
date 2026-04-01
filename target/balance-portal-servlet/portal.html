@@ -10,7 +10,7 @@
   <main class="shell shell--portal">
     <header class="portal-header">
       <div>
-        <p class="eyebrow">Balance portal</p>
+        <p id="app-name" class="eyebrow">Northwind Balance Portal</p>
         <h1 id="portal-name">Loading account...</h1>
         <p id="portal-email" class="lede lede--compact"></p>
       </div>
@@ -34,8 +34,10 @@
 
     <section class="ledger">
       <div class="ledger-head">
-        <h2>Transaction history</h2>
-        <p>Entries are loaded with AJAX from the servlet JSON endpoints.</p>
+        <div>
+          <h2>Transaction history</h2>
+          <p>Entries are loaded with AJAX from the servlet JSON endpoints.</p>
+        </div>
       </div>
 
       <p id="portal-message" class="form-message" aria-live="polite"></p>

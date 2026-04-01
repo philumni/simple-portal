@@ -7,11 +7,17 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public final class ConnectionFactory {
+    private static final String CONNECTOR_URL_TEMPLATE =
+            "jdbc:mysql:///%s?socketFactory=com.google.cloud.sql.mysql.SocketFactory"
+                    + "&cloudSqlInstance=%s"
+                    + "&ipTypes=%s"
+                    + "&cloudSqlRefreshStrategy=lazy";
+
     static {
         try {
-            Class.forName("org.mariadb.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException exception) {
-            throw new IllegalStateException("MariaDB JDBC driver not found on the classpath.", exception);
+            throw new IllegalStateException("MySQL JDBC driver not found on the classpath.", exception);
         }
     }
 
@@ -19,10 +25,19 @@ public final class ConnectionFactory {
     }
 
     public static Connection openConnection() throws SQLException {
-        return DriverManager.getConnection(
-                AppConfig.dbUrl(),
-                AppConfig.dbUser(),
-                AppConfig.dbPassword()
-        );
+        String instanceConnectionName = AppConfig.instanceConnectionName();
+
+        if (instanceConnectionName != null && !instanceConnectionName.isBlank()) {
+            String connectorUrl = String.format(
+                    CONNECTOR_URL_TEMPLATE,
+                    AppConfig.dbName(),
+                    instanceConnectionName,
+                    AppConfig.dbIpTypes()
+            );
+
+            return DriverManager.getConnection(connectorUrl, AppConfig.dbUser(), AppConfig.dbPassword());
+        }
+
+        return DriverManager.getConnection(AppConfig.dbUrl(), AppConfig.dbUser(), AppConfig.dbPassword());
     }
 }

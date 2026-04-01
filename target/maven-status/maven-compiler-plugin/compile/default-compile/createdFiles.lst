@@ -1,5 +1,7 @@
+com\example\balanceportal\model\JournalEntry.class
 com\example\balanceportal\web\AuthLoginServlet$LoginPayload.class
 com\example\balanceportal\config\AppConfig.class
+com\example\balanceportal\web\JournalsServlet.class
 com\example\balanceportal\dao\TransactionDao.class
 com\example\balanceportal\web\BaseApiServlet.class
 com\example\balanceportal\web\CurrentCustomerServlet.class
@@ -14,4 +16,6 @@ com\example\balanceportal\security\SessionAuth.class
 com\example\balanceportal\model\Customer.class
 com\example\balanceportal\web\AuthLogoutServlet.class
 com\example\balanceportal\db\ConnectionFactory.class
+com\example\balanceportal\dao\JournalDao.class
 com\example\balanceportal\model\Transaction.class
+com\example\balanceportal\web\JournalDetailServlet.class

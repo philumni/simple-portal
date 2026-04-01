@@ -1,58 +1,23 @@
-# Balance Portal Servlet Example
+# Balance Portal Servlet
 
-This sample keeps the stack intentionally plain:
+This project is a simple customer balance portal built with:
 
 - Java 21
 - Jakarta Servlets
-- MariaDB
-- Static HTML, CSS, and vanilla JavaScript
-- AJAX calls to JSON servlet endpoints
-- `HttpSession` for login state
+- MySQL / Cloud SQL for MySQL
+- Plain HTML, CSS, and vanilla JavaScript
+- Session-based login with `HttpSession`
+- Cloud SQL Java Connector support when `BALANCE_PORTAL_INSTANCE_CONNECTION_NAME` is set
 
-## Project shape
+## What it does
 
-- `src/main/java/.../dao`: small JDBC data access classes
-- `src/main/java/.../security`: password hashing and session helpers
-- `src/main/java/.../web`: JSON servlets
-- `src/main/webapp`: static frontend files
-- `sql/schema.sql`: minimal schema
-- `Dockerfile`: container image for the servlet app
-- `compose.yaml`: local app + MariaDB stack
+- Create accounts
+- Sign in and sign out
+- Show balance owed
+- Show total charges and total payments
+- Show the customer transaction ledger
 
-## Minimal schema
-
-The database uses only two tables:
-
-1. `customers`
-2. `customer_transactions`
-
-Sessions are handled by the servlet container through `HttpSession`, which keeps the schema easier to read.
-
-## Database setup
-
-Run the schema file in MariaDB:
-
-```sql
-source sql/schema.sql;
-```
-
-Then set these environment variables before starting your servlet container:
-
-```powershell
-$env:BALANCE_PORTAL_DB_URL="jdbc:mariadb://localhost:3306/balance_portal"
-$env:BALANCE_PORTAL_DB_USER="root"
-$env:BALANCE_PORTAL_DB_PASSWORD="password"
-```
-
-## Application flow
-
-1. A customer registers with email, full name, and password.
-2. The password is hashed with PBKDF2.
-3. The servlet stores the customer id in `HttpSession`.
-4. A starter set of sample transactions is inserted for the new account.
-5. The frontend loads `/api/me` and `/api/transactions` with AJAX and renders the portal.
-
-## Endpoints
+## Active endpoints
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -60,22 +25,24 @@ $env:BALANCE_PORTAL_DB_PASSWORD="password"
 - `GET /api/me`
 - `GET /api/transactions`
 
-## Running it
+## Key files
 
-This is a standard WAR project. A simple path is:
+- `src/main/java/.../config/AppConfig.java`
+- `src/main/java/.../db/ConnectionFactory.java`
+- `src/main/java/.../web`
+- `src/main/webapp`
+- `sql/schema.sql`
+- `compose.yaml`
+- `Dockerfile`
+- `cloud/db-init`
+- `cloudbuild.yaml`
 
-1. Install Maven if it is not available on your machine.
-2. Build with `mvn clean package`.
-3. Deploy `target/balance-portal-servlet.war` to Tomcat 10.1+.
+## Local Docker
 
-I did not run the build in this workspace because Maven is not installed globally here.
+The local stack is:
 
-## Running with Docker locally
-
-The project includes a multi-stage `Dockerfile` for the servlet app and a `compose.yaml` file that starts:
-
-1. the Tomcat app on port `8080`
-2. a MariaDB container on port `3306`
+1. `app` on port `8080`
+2. `mysql` on port `3306`
 
 From the project root:
 
@@ -89,89 +56,64 @@ Then open:
 http://localhost:8080/
 ```
 
-The MariaDB container loads `sql/schema.sql` automatically on first startup.
-
-The local Docker setup uses these app environment variables:
+Local Docker uses these variables:
 
 ```text
-BALANCE_PORTAL_DB_URL=jdbc:mariadb://mariadb:3306/balance_portal
+BALANCE_PORTAL_DB_URL=jdbc:mysql://mysql:3306/balance_portal?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+BALANCE_PORTAL_DB_NAME=balance_portal
 BALANCE_PORTAL_DB_USER=root
 BALANCE_PORTAL_DB_PASSWORD=rootpassword
 ```
 
-## Cloud Run note
+## Cloud Run and Cloud SQL
 
-The servlet app container is a good fit for Cloud Run.
+The app now supports the Cloud SQL Java Connector path.
 
-The MariaDB container is not.
+When `BALANCE_PORTAL_INSTANCE_CONNECTION_NAME` is set, the app uses the connector-based Cloud SQL connection instead of the raw `BALANCE_PORTAL_DB_URL`.
 
-For Google Cloud, the usual production pattern is:
-
-1. Build and deploy the app container to Cloud Run.
-2. Point the app at an external managed database.
-
-Important: Google Cloud SQL supports MySQL, PostgreSQL, and SQL Server. It does not offer MariaDB as a managed Cloud SQL engine. So if you want to stay on Google Cloud, you have two realistic options:
-
-1. use Cloud Run for the app and connect to an external MariaDB database
-2. use Cloud Run for the app and move the database to Cloud SQL for MySQL
-
-If you deploy the app container to Cloud Run, keep using the same environment variables, but set `BALANCE_PORTAL_DB_URL` to the reachable database host for that environment.
-
-Example shape:
+For your current Google Cloud setup, the intended app-side variables are:
 
 ```text
-BALANCE_PORTAL_DB_URL=jdbc:mariadb://YOUR_DB_HOST:3306/balance_portal
-BALANCE_PORTAL_DB_USER=YOUR_DB_USER
-BALANCE_PORTAL_DB_PASSWORD=YOUR_DB_PASSWORD
+BALANCE_PORTAL_INSTANCE_CONNECTION_NAME=project-051d6e24-390d-450c-aa4:europe-west1:app-db
+BALANCE_PORTAL_DB_NAME=app-db
+BALANCE_PORTAL_DB_USER=<from secret>
+BALANCE_PORTAL_DB_PASSWORD=<from secret>
+BALANCE_PORTAL_DB_IP_TYPES=PUBLIC
 ```
 
-## Cloud Run container deployment
+## Cloud Build scaffold
 
-Build the container locally:
+`cloudbuild.yaml` is aligned to the values you provided:
 
-```powershell
-docker build -t balance-portal-servlet .
-```
+- region: `europe-west1`
+- repo: `my-app-images`
+- service: `app-service`
+- job: `db-initializer-job`
+- instance connection name: `project-051d6e24-390d-450c-aa4:europe-west1:app-db`
+- DB name: `app-db`
+- app secrets:
+  - `app-db-username`
+  - `app-db-password`
+- init job secrets:
+  - `db-initializer-username`
+  - `db-initializer-password`
 
-Example Artifact Registry tag:
+The remaining placeholder is:
 
 ```text
-us-central1-docker.pkg.dev/YOUR_PROJECT_ID/balance-portal/balance-portal-servlet:latest
+_DB_HOST=CHANGE_ME_CLOUD_SQL_PUBLIC_IP
 ```
 
-Build and push with Google Cloud Build:
+That host is only for the database initializer job, which still runs SQL scripts through the MySQL CLI client.
+
+## Manual build
 
 ```powershell
-gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/balance-portal/balance-portal-servlet:latest
+mvn clean package
 ```
 
-Deploy the app container to Cloud Run:
+That creates:
 
-```powershell
-gcloud run deploy balance-portal-servlet `
-  --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/balance-portal/balance-portal-servlet:latest `
-  --platform managed `
-  --region us-central1 `
-  --allow-unauthenticated `
-  --set-env-vars BALANCE_PORTAL_DB_URL="jdbc:mariadb://YOUR_DB_HOST:3306/balance_portal",BALANCE_PORTAL_DB_USER="YOUR_DB_USER",BALANCE_PORTAL_DB_PASSWORD="YOUR_DB_PASSWORD"
-```
-
-Use Secret Manager instead of plain text environment variables for a real deployment when possible.
-
-## Container build commands
-
-Build the app image:
-
-```powershell
-docker build -t balance-portal-servlet .
-```
-
-Run the app container by itself:
-
-```powershell
-docker run --rm -p 8080:8080 `
-  -e BALANCE_PORTAL_DB_URL="jdbc:mariadb://host.docker.internal:3306/balance_portal" `
-  -e BALANCE_PORTAL_DB_USER="root" `
-  -e BALANCE_PORTAL_DB_PASSWORD="your-password" `
-  balance-portal-servlet
+```text
+target/balance-portal-servlet.war
 ```

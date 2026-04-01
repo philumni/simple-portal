@@ -109,13 +109,13 @@ async function loadPortal() {
       apiRequest("api/transactions"),
     ]);
 
-    renderCustomer(me.customer);
+    renderCustomer(me);
     renderSummary(ledger.summary);
     renderTransactions(ledger.transactions);
     bindLogout();
     setMessage(message, "");
   } catch (error) {
-    if (error.message === "You are not signed in." || error.message === "Your session is no longer valid.") {
+    if (isAuthError(error)) {
       window.location.href = "login.html";
       return;
     }
@@ -124,9 +124,10 @@ async function loadPortal() {
   }
 }
 
-function renderCustomer(customer) {
-  document.getElementById("portal-name").textContent = customer.fullName;
-  document.getElementById("portal-email").textContent = customer.email;
+function renderCustomer(payload) {
+  document.getElementById("app-name").textContent = payload.appName;
+  document.getElementById("portal-name").textContent = payload.customer.fullName;
+  document.getElementById("portal-email").textContent = payload.customer.email;
 }
 
 function renderSummary(summary) {
@@ -172,6 +173,10 @@ function bindLogout() {
       setMessage(message, error.message, "error");
     }
   });
+}
+
+function isAuthError(error) {
+  return error.message === "You are not signed in." || error.message === "Your session is no longer valid.";
 }
 
 function setMessage(element, text, state = "") {

@@ -1,0 +1,2 @@
+-- The application inserts starter ledger entries when a customer registers.
+-- Keep this file so the DB init job can run a predictable script sequence.

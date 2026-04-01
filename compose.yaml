@@ -6,29 +6,30 @@ services:
     ports:
       - "8080:8080"
     environment:
-      BALANCE_PORTAL_DB_URL: jdbc:mariadb://mariadb:3306/balance_portal
+      BALANCE_PORTAL_DB_URL: jdbc:mysql://mysql:3306/balance_portal?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      BALANCE_PORTAL_DB_NAME: balance_portal
       BALANCE_PORTAL_DB_USER: root
       BALANCE_PORTAL_DB_PASSWORD: rootpassword
     depends_on:
-      mariadb:
+      mysql:
         condition: service_healthy
 
-  mariadb:
-    image: mariadb:11.8
+  mysql:
+    image: mysql:8.4
     environment:
-      MARIADB_ROOT_PASSWORD: rootpassword
-      MARIADB_DATABASE: balance_portal
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: balance_portal
     ports:
       - "3306:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -prootpassword"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
 
 volumes:
-  mariadb_data:
+  mysql_data:
